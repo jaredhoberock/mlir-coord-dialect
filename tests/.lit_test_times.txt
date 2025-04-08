@@ -1,0 +1,2 @@
+2.528620e-02 from_scalar.mlir
+2.531910e-02 invalid.mlir
