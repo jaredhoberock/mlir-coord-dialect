@@ -13,6 +13,11 @@ def CoordDialect : Dialect {
   let extraClassDeclaration = [{
     void registerTypes();
   }];
+
+  let dependentDialects = [
+    "mlir::arith::ArithDialect",
+    "mlir::vector::VectorDialect"
+  ];
 }
 
 class CoordOp<string mnemonic, list<Trait> traits = []> :

@@ -1,5 +1,6 @@
 #include "Dialect.hpp"
 #include "Ops.hpp"
+#include "ShapeEncoding.hpp"
 #include <mlir/IR/Builders.h>
 
 #define GET_OP_CLASSES
@@ -7,8 +8,6 @@
 
 using namespace mlir;
 using namespace mlir::coord;
-
-static constexpr int64_t ScalarShapeEncoding = 0b10;
 
 LogicalResult FromScalarOp::verify() {
   auto coordTy = dyn_cast<CoordType>(getResult().getType());
