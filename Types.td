@@ -12,6 +12,7 @@ def CoordType : TypeDef<CoordDialect, "Coord"> {
   );
 
   let assemblyFormat = "`<` $shape `>`";
+  let genVerifyDecl = 1;
 }
 
 #endif // COORD_TYPES_TD
