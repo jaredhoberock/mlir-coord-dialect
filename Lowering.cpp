@@ -12,19 +12,102 @@ using namespace mlir;
 
 namespace mlir::coord {
 
-struct FromScalarOpLowering : public OpConversionPattern<FromScalarOp> {
+// Lowering strategy for `coord.make`:
+//
+// Each `coord.make` op constructs a coordinate value from a variadic list of
+// operands, each of which is either an `i64` scalar or another `coord.coord`.
+// The result is a flattened vector of `i64` values.
+//
+// We lower this to a single `vector<Ni64>` where `N` is the total number of
+// integer elements in the structure.
+//
+// Lowering steps:
+//   1. Determine the total number of integer leaves (N) from the shape encoding.
+//   2. Allocate an initial vector<Ni64> using `vector.splat` of zero.
+//   3. For each operand:
+//       a. If it's an `i64`, insert it directly at the current offset.
+//       b. If it's a `coord.coord`, treat it as a flattened `vector<Mxi64>`
+//          and insert it using `vector.insert`.
+//   4. The final result is the fully assembled vector representing the coord.
+//
+// Example:
+//   coord.make %a, %b : i64, !coord.coord<2> to !coord.coord<43>
+//
+//   would lower to something like:
+//
+//     %zero = arith.constant 0 : i64
+//     %vinit = vector.splat %zero : vector<3xi64>
+//     %v0 = vector.insert %a, %vinit[0] : i64 into vector<3xi64>
+//     %v1 = vector.insert %b, %v0[1]     : vector<2xi64> into vector<3xi64>
+//
+//   where `%b` is a coord.coord<2> already represented as vector<2xi64>.
+struct MakeOpLowering : public OpConversionPattern<MakeOp> {
   using OpConversionPattern::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(FromScalarOp op, OpAdaptor adaptor,
+  LogicalResult matchAndRewrite(MakeOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &rewriter) const override {
-    auto coordTy = dyn_cast<CoordType>(op.getResult().getType());
-    if (!coordTy || coordTy.getShape() != coord::ScalarShapeEncoding)
-      return rewriter.notifyMatchFailure(op, "coord.from_scalar requires scalar shape encoding");
 
-    auto loc = op.getLoc();
-    auto vecTy = VectorType::get({1}, rewriter.getI64Type());
+    Location loc = op.getLoc();
+    auto resultCoordTy = dyn_cast<CoordType>(op.getType());
+    if (!resultCoordTy)
+      return rewriter.notifyMatchFailure(op, "result type must be coord");
 
-    Value result = rewriter.create<vector::FromElementsOp>(loc, vecTy, adaptor.getValue());
+    // Compute total number of i64 elements
+    int64_t totalElements = coord::getNumIntegersFromShape(resultCoordTy.getShape());
+
+    // Special case: coord<0> lowers to i1
+    if (totalElements == 0) {
+      Type i1Ty = rewriter.getIntegerType(1);
+      Value zero = rewriter.create<arith::ConstantOp>(loc, i1Ty, rewriter.getIntegerAttr(i1Ty, 0));
+      rewriter.replaceOp(op, zero);
+      return success();
+    }
+
+    // Create result vector type
+    auto i64Ty = rewriter.getIntegerType(64);
+    auto resultVectorTy = VectorType::get({totalElements}, i64Ty);
+
+    // Begin from a single zero value across the entire vector
+    auto zero = rewriter.create<arith::ConstantOp>(loc, i64Ty, rewriter.getIntegerAttr(i64Ty, 0));
+    Value result = rewriter.create<vector::SplatOp>(loc, resultVectorTy, zero);
+
+    // Insert operands into the result vector
+    int64_t offset = 0;
+    for (Value operand : adaptor.getOperands()) {
+      // check the type of the lowered operand
+      Type operandTy = operand.getType();
+
+      if (!operandTy.isInteger(64) && !operandTy.isInteger(1) &&
+          !(isa<VectorType>(operandTy) && cast<VectorType>(operandTy).getElementType().isInteger(64))) {
+        return rewriter.notifyMatchFailure(op, "operand must be i1, i64, or vector<Nxi64>");
+      }
+
+      // skip i1 (empty) operands, they contribute no elements
+      if (operandTy.isInteger(1)) {
+        continue;
+      }
+
+      // If operand is a vector, use vector.insert_strided_slice
+      if (auto vecTy = dyn_cast<VectorType>(operandTy)) {
+        int64_t numElements = vecTy.getNumElements();
+        SmallVector<int64_t> offsets = {offset};
+        SmallVector<int64_t> strides = {1};
+
+        result = rewriter.create<vector::InsertStridedSliceOp>(
+          loc, 
+          operand, 
+          result, 
+          offsets, 
+          strides
+        );
+
+        offset += numElements;
+      } else {
+        // For scalar i64, use vector.insert
+        result = rewriter.create<vector::InsertOp>(loc, operand, result, offset);
+        offset += 1;
+      }
+    }
 
     rewriter.replaceOp(op, result);
     return success();
@@ -38,19 +121,20 @@ struct SumOpLowering : public OpConversionPattern<SumOp> {
                                 ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
 
-    // The operands should already by lowered to vector<i64>
+    // The operands should already by lowered to i0 or vector<Nxi64>
     Value lhs = adaptor.getLhs();
     Value rhs = adaptor.getRhs();
 
     if (lhs.getType() != rhs.getType())
       return rewriter.notifyMatchFailure(op, "operand types must match");
 
-    auto vecTy = dyn_cast<VectorType>(lhs.getType());
-    if (!vecTy)
-      return rewriter.notifyMatchFailure(op, "expected vector type");
+    if (!isa<VectorType>(lhs.getType()) && !lhs.getType().isInteger(1)) {
+      return rewriter.notifyMatchFailure(op, "operands must be i1 or vector<Nxi64>");
+    }
 
-    Value result = rewriter.create<arith::AddIOp>(loc, vecTy, lhs, rhs);
+    Value result = rewriter.create<arith::AddIOp>(loc, lhs, rhs);
     rewriter.replaceOp(op, result);
+
     return success();
   }
 };
@@ -60,12 +144,18 @@ void populateCoordToLLVMConversionPatterns(LLVMTypeConverter& typeConverter, Rew
   typeConverter.addConversion([&](CoordType coordTy) -> Type {
     int64_t shape = coordTy.getShape();
     int64_t n = coord::getNumIntegersFromShape(shape);
-    return VectorType::get({n}, IntegerType::get(coordTy.getContext(), 64));
+    auto ctx = coordTy.getContext();
+
+    // 0-element vectors are illegal, so lower empty coordinates to i1
+    if (n == 0) return IntegerType::get(ctx, 1);
+
+    // otherwise, use vector<nxi64>
+    return VectorType::get({n}, IntegerType::get(ctx, 64));
   });
 
   // lower ops
   patterns.add<
-    FromScalarOpLowering,
+    MakeOpLowering,
     SumOpLowering
   >(typeConverter, patterns.getContext());
 
