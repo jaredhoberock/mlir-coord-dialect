@@ -114,6 +114,8 @@ func.func @sum_pair(%a: !coord.coord<107>, %b: !coord.coord<107>) -> !coord.coor
 
 // CHECK-LABEL: func @sum_nested
 // CHECK-NOT: builtin.unrealized_conversion_cast
+// CHECK: llvm.add
+// CHECK: vector<3xi64>
 // CHECK: llvm.return
 func.func @sum_nested(%a: !coord.coord<6575>, %b: !coord.coord<6575>) -> !coord.coord<6575> {
   %c = coord.sum %a, %b : !coord.coord<6575>
