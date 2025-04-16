@@ -2,10 +2,12 @@
 #include "Lowering.hpp"
 #include "Ops.hpp"
 #include "ShapeEncoding.hpp"
+#include <mlir/Conversion/ArithToLLVM/ArithToLLVM.h>
 #include <mlir/Conversion/LLVMCommon/TypeConverter.h>
 #include <mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h>
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/Dialect/Vector/IR/VectorOps.h>
+#include <mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h>
 #include <mlir/Transforms/DialectConversion.h>
 
 using namespace mlir;
@@ -159,7 +161,10 @@ void populateCoordToLLVMConversionPatterns(LLVMTypeConverter& typeConverter, Rew
     SumOpLowering
   >(typeConverter, patterns.getContext());
 
+  vector::populateVectorInsertExtractStridedSliceTransforms(patterns);
+
   populateVectorToLLVMConversionPatterns(typeConverter, patterns);
+  arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
 }
 
 }

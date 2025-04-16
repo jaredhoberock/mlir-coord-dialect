@@ -1,0 +1,128 @@
+Forced debug-only=dialect-conversion
+
+//===-------------------------------------------===//
+Legalizing operation : 'builtin.module'(0x7254c41a75d0) {
+  * Fold {
+  } -> FAILURE : unable to fold
+} -> FAILURE : no matched legalization pattern
+//===-------------------------------------------===//
+
+//===-------------------------------------------===//
+Legalizing operation : 'func.func'(0x7254c41a8f20) {
+  * Fold {
+  } -> FAILURE : unable to fold
+} -> FAILURE : no matched legalization pattern
+//===-------------------------------------------===//
+
+//===-------------------------------------------===//
+Legalizing operation : 'coord.sum'(0x7254c41a8510) {
+  %0 = "coord.sum"(%arg0, %arg1) : (!coord.coord<299>, !coord.coord<299>) -> !coord.coord<299>
+
+  * Fold {
+  } -> FAILURE : unable to fold
+
+  * Pattern : 'coord.sum -> ()' {
+    ** Insert  : 'arith.addi'(0x7254c41b0dd0)
+    ** Replace : 'coord.sum'(0x7254c41a8510)
+
+    //===-------------------------------------------===//
+    Legalizing operation : 'arith.addi'(0x7254c41b0dd0) {
+      %2 = "arith.addi"(%1, %0) <{overflowFlags = #arith.overflow<none>}> : (vector<2xi64>, vector<2xi64>) -> vector<2xi64>
+
+      * Fold {
+      } -> FAILURE : unable to fold
+
+      * Pattern : 'arith.addi -> ()' {
+        ** Insert  : 'llvm.add'(0x7254c4091390)
+        ** Replace : 'arith.addi'(0x7254c41b0dd0)
+
+        //===-------------------------------------------===//
+        Legalizing operation : 'llvm.add'(0x7254c4091390) {
+          %2 = "llvm.add"(%1, %0) <{overflowFlags = #llvm.overflow<none>}> : (vector<2xi64>, vector<2xi64>) -> vector<2xi64>
+
+        } -> SUCCESS : operation marked legal by the target
+        //===-------------------------------------------===//
+      } -> SUCCESS : pattern applied successfully
+    } -> SUCCESS
+    //===-------------------------------------------===//
+  } -> SUCCESS : pattern applied successfully
+} -> SUCCESS
+//===-------------------------------------------===//
+
+//===-------------------------------------------===//
+Legalizing operation : 'func.return'(0x7254c41a85b0) {
+  "func.return"(%4) : (!coord.coord<299>) -> ()
+
+  * Fold {
+  } -> FAILURE : unable to fold
+} -> FAILURE : no matched legalization pattern
+//===-------------------------------------------===//
+** Insert  : 'builtin.unrealized_conversion_cast'(0x7254c41b64f0)
+** Insert  : 'builtin.unrealized_conversion_cast'(0x7254c41b6580)
+** Insert  : 'builtin.unrealized_conversion_cast'(0x7254c41b6610)
+
+//===-------------------------------------------===//
+Legalizing operation : 'builtin.module'(0x7254c41a75d0) {
+  * Fold {
+  } -> FAILURE : unable to fold
+} -> FAILURE : no matched legalization pattern
+//===-------------------------------------------===//
+
+//===-------------------------------------------===//
+Legalizing operation : 'func.func'(0x7254c41a8f20) {
+  * Fold {
+  } -> FAILURE : unable to fold
+
+  * Pattern : 'func.func -> ()' {
+    ** Failure : signature conversion failed
+    ** Failure : Could not convert funcop
+  } -> FAILURE : pattern failed to match
+} -> FAILURE : no matched legalization pattern
+//===-------------------------------------------===//
+
+//===-------------------------------------------===//
+Legalizing operation : 'builtin.unrealized_conversion_cast'(0x7254c41b64f0) {
+  %0 = "builtin.unrealized_conversion_cast"(%arg1) : (!coord.coord<299>) -> vector<2xi64>
+
+} -> SUCCESS : operation marked legal by the target
+//===-------------------------------------------===//
+
+//===-------------------------------------------===//
+Legalizing operation : 'builtin.unrealized_conversion_cast'(0x7254c41b6580) {
+  %1 = "builtin.unrealized_conversion_cast"(%arg0) : (!coord.coord<299>) -> vector<2xi64>
+
+} -> SUCCESS : operation marked legal by the target
+//===-------------------------------------------===//
+
+//===-------------------------------------------===//
+Legalizing operation : 'llvm.add'(0x7254c4091390) {
+  %2 = "llvm.add"(%1, %0) <{overflowFlags = #llvm.overflow<none>}> : (vector<2xi64>, vector<2xi64>) -> vector<2xi64>
+
+} -> SUCCESS : operation marked legal by the target
+//===-------------------------------------------===//
+
+//===-------------------------------------------===//
+Legalizing operation : 'builtin.unrealized_conversion_cast'(0x7254c41b6610) {
+  %3 = "builtin.unrealized_conversion_cast"(%2) : (vector<2xi64>) -> !coord.coord<299>
+
+} -> SUCCESS : operation marked legal by the target
+//===-------------------------------------------===//
+
+//===-------------------------------------------===//
+Legalizing operation : 'func.return'(0x7254c41a85b0) {
+  "func.return"(%3) : (!coord.coord<299>) -> ()
+
+  * Fold {
+  } -> FAILURE : unable to fold
+
+  * Pattern : 'func.return -> ()' {
+    ** Failure : unable to convert type for operand #0, type was '!coord.coord<299>'
+  } -> FAILURE : pattern failed to match
+} -> FAILURE : no matched legalization pattern
+//===-------------------------------------------===//
+error: cannot be converted to LLVM IR: missing `LLVMTranslationDialectInterface` registration for dialect for op: func.func
+Created execution engine
+error: test failed, to rerun pass `--test integration`
+
+Caused by:
+  process didn't exit successfully: `/home/jhoberock/dev/git/mlir-coord-dialect/coord-rust/target/debug/deps/integration-c84e9803cbe0227c --nocapture` (signal: 11, SIGSEGV: invalid memory reference)
