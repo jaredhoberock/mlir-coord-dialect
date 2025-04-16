@@ -4,8 +4,6 @@ use mlir_sys::{MlirContext, MlirLocation, MlirOperation, MlirPass, MlirType, Mli
 #[link(name = "coord_dialect")]
 unsafe extern "C" {
     fn coordRegisterDialect(ctx: MlirContext);
-    fn coordCoordTypeGet(ctx: MlirContext, shape: i64) -> MlirType;
-    fn coordMakeOpCreate(loc: MlirLocation, result_ty: MlirType, elements: *const MlirValue, n: isize) -> MlirOperation;
     fn coordMakeTupleOpCreate(loc: MlirLocation, result_ty: MlirType, elements: *const MlirValue, n: isize) -> MlirOperation;
     fn coordSumOpCreate(loc: MlirLocation, lhs: MlirValue, rhs: MlirValue, result_ty: MlirType) -> MlirOperation;
     fn coordCreateConvertCoordToLLVMPass() -> MlirPass;
@@ -19,17 +17,6 @@ pub fn create_coord_to_llvm() -> Pass {
     unsafe {
         Pass::from_raw(coordCreateConvertCoordToLLVMPass())
     }
-}
-
-pub fn coord_type(context: &Context, shape: i64) -> Type {
-    unsafe { Type::from_raw(coordCoordTypeGet(context.to_raw(), shape)) }
-}
-
-pub fn make<'c>(loc: Location<'c>, result_ty: Type<'c>, values: &[Value<'c, 'c>]) -> Operation<'c> {
-    let op = unsafe {
-        coordMakeOpCreate(loc.to_raw(), result_ty.to_raw(), values.as_ptr() as *const _, values.len() as isize)
-    };
-    unsafe { Operation::from_raw(op) }
 }
 
 pub fn make_tuple<'c>(loc: Location<'c>, result_ty: Type<'c>, values: &[Value<'c, 'c>]) -> Operation<'c> {

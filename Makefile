@@ -16,11 +16,11 @@ MLIR_INCLUDE = /home/jhoberock/dev/git/llvm-project-20/install/include
 INCLUDES := -I $(MLIR_INCLUDE)
 
 # Dialect library sources (everything except main)
-DIALECT_SOURCES := coord_c.cpp Canonicalization.cpp Dialect.cpp Lowering.cpp Ops.cpp Types.cpp
+DIALECT_SOURCES := coord_c.cpp Canonicalization.cpp Dialect.cpp Lowering.cpp Ops.cpp
 DIALECT_OBJECTS := $(DIALECT_SOURCES:.cpp=.o)
 
 # Generated files
-GENERATED := Dialect.hpp.inc Dialect.cpp.inc Ops.hpp.inc Ops.cpp.inc Types.hpp.inc Types.cpp.inc
+GENERATED := Dialect.hpp.inc Dialect.cpp.inc Ops.hpp.inc Ops.cpp.inc
 
 .PHONY: all clean
 
@@ -38,12 +38,6 @@ Ops.hpp.inc: Ops.td
 
 Ops.cpp.inc: Ops.td
 	$(TBLGEN) --gen-op-defs $(INCLUDES) $< -o $@
-
-Types.hpp.inc: Types.td
-	$(TBLGEN) --gen-typedef-decls $(INCLUDES) $< -o $@
-
-Types.cpp.inc: Types.td
-	$(TBLGEN) --gen-typedef-defs $(INCLUDES) $< -o $@
 
 # Object file rules
 %.o: %.cpp $(GENERATED)

@@ -1,7 +1,6 @@
 #include "Dialect.hpp"
 #include "Ops.hpp"
 #include "Lowering.hpp"
-#include "Types.hpp"
 #include <llvm/ADT/STLExtras.h>
 #include <mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h>
 #include <mlir/Dialect/Arith/IR/Arith.h>
@@ -29,8 +28,6 @@ void CoordDialect::initialize() {
 #define GET_OP_LIST
 #include "Ops.cpp.inc"
   >();
-
-  registerTypes();
 
   addInterfaces<
     ConvertToLLVMInterface
