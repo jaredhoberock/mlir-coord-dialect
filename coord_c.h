@@ -24,6 +24,10 @@ int64_t coordCoordTypeGetShape(MlirType type);
 MlirOperation coordMakeOpCreate(MlirLocation loc, MlirType resultType,
                                 MlirValue* elements, intptr_t nElements);
 
+/// Create a coord.make_tuple operation.
+MlirOperation coordMakeTupleOpCreate(MlirLocation loc, MlirType resultType,
+                                     MlirValue* elements, intptr_t nElements);
+
 /// Create a coord.sum operation.
 MlirOperation coordSumOpCreate(MlirLocation loc, MlirValue lhs, MlirValue rhs,
                                MlirType resultType);

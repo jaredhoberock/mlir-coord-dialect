@@ -1,4 +1,4 @@
-use coord::bindings::{coord_type, register, sum};
+use coord::bindings::{register, sum};
 use melior::{
     Context,
     dialect::{func, DialectRegistry},
@@ -6,7 +6,7 @@ use melior::{
     ir::{
         attribute::{StringAttribute, TypeAttribute},
         Attribute,
-        r#type::FunctionType,
+        r#type::{FunctionType, IntegerType, TupleType, Type},
         Block, BlockLike, Location, Module, Region, RegionLike,
     },
     pass::{self, PassManager},
@@ -29,8 +29,8 @@ fn test_coordinate_sum_jit() {
     let location = Location::unknown(&context);
     let mut module = Module::new(location);
 
-    let shape_encoding = 0b0100101011; // shape for (i64, i64)
-    let coord_ty = coord_type(&context, shape_encoding);
+    let i64_ty = IntegerType::new(&context, 64).into();
+    let coord_ty: Type = TupleType::new(&context, &[i64_ty, i64_ty]).into();
 
     let function_type = FunctionType::new(&context, &[coord_ty, coord_ty], &[coord_ty]);
 

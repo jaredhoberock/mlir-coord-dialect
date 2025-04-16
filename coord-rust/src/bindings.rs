@@ -6,6 +6,7 @@ unsafe extern "C" {
     fn coordRegisterDialect(ctx: MlirContext);
     fn coordCoordTypeGet(ctx: MlirContext, shape: i64) -> MlirType;
     fn coordMakeOpCreate(loc: MlirLocation, result_ty: MlirType, elements: *const MlirValue, n: isize) -> MlirOperation;
+    fn coordMakeTupleOpCreate(loc: MlirLocation, result_ty: MlirType, elements: *const MlirValue, n: isize) -> MlirOperation;
     fn coordSumOpCreate(loc: MlirLocation, lhs: MlirValue, rhs: MlirValue, result_ty: MlirType) -> MlirOperation;
     fn coordCreateConvertCoordToLLVMPass() -> MlirPass;
 }
@@ -27,6 +28,13 @@ pub fn coord_type(context: &Context, shape: i64) -> Type {
 pub fn make<'c>(loc: Location<'c>, result_ty: Type<'c>, values: &[Value<'c, 'c>]) -> Operation<'c> {
     let op = unsafe {
         coordMakeOpCreate(loc.to_raw(), result_ty.to_raw(), values.as_ptr() as *const _, values.len() as isize)
+    };
+    unsafe { Operation::from_raw(op) }
+}
+
+pub fn make_tuple<'c>(loc: Location<'c>, result_ty: Type<'c>, values: &[Value<'c, 'c>]) -> Operation<'c> {
+    let op = unsafe {
+        coordMakeTupleOpCreate(loc.to_raw(), result_ty.to_raw(), values.as_ptr() as *const _, values.len() as isize)
     };
     unsafe { Operation::from_raw(op) }
 }
