@@ -1,5 +1,5 @@
 [package]
-name = "coord-rust"
+name = "mlir-coord-dialect-rust"
 version = "0.1.0"
 edition = "2024"
 
