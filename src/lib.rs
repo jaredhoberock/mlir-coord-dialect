@@ -1,1 +1,2 @@
-pub mod bindings;
+mod bindings;
+pub use crate::bindings::*;
