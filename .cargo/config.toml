@@ -4,8 +4,6 @@ TABLEGEN_200_PREFIX = "/home/jhoberock/dev/git/llvm-project-20/install"
 
 [build]
 rustflags = [
-  # this allows cargo test to find libcoord_dialect.so
-  "-C", "link-arg=-Wl,-rpath,/home/jhoberock/dev/git/mlir-coord-dialect/cpp",
-  # this allows cargo test to find our debug build of MLIR
+  # this allows cargo test to find our debug build of the MLIR shared library
   "-C", "link-arg=-Wl,-rpath,/home/jhoberock/dev/git/llvm-project-20/install/lib",
 ]

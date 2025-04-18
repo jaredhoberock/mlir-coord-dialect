@@ -1,4 +1,3 @@
-#LLVM_BIN_PATH = /home/jhoberock/dev/git/llvm-project-19/build/bin
 LLVM_BIN_PATH = /home/jhoberock/dev/git/llvm-project-20/build/bin
 
 LLVM_CONFIG := $(LLVM_BIN_PATH)/llvm-config
@@ -24,7 +23,7 @@ GENERATED := Dialect.hpp.inc Dialect.cpp.inc Ops.hpp.inc Ops.cpp.inc
 
 .PHONY: all clean
 
-all: libcoord_dialect.so
+all: libcoord_dialect.a libcoord_dialect.so
 
 # TableGen rules
 Dialect.hpp.inc: Dialect.td
@@ -42,6 +41,9 @@ Ops.cpp.inc: Ops.td
 # Object file rules
 %.o: %.cpp $(GENERATED)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+libcoord_dialect.a: $(DIALECT_OBJECTS)
+	ar rcs $@ $^
 
 PLUGIN_OBJECTS := $(DIALECT_OBJECTS) Plugin.o
 
