@@ -1,4 +1,4 @@
-use coord::bindings::{register, sum};
+use coord_dialect::bindings::{register, sum};
 use melior::{
     Context,
     dialect::{func, DialectRegistry},
