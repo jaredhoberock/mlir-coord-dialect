@@ -24,6 +24,9 @@ fn main() {
     println!("cargo:rustc-link-search=native={}", cpp_dir.display());
     println!("cargo:rustc-link-lib=dylib=coord_dialect");
 
+    // Embed runtime search path (rpath)
+    println!("cargo:rustc-link-arg=-Wl,-rpath,{}", cpp_dir.display());
+
     // Ensure rebuild if anything in cpp/ changes
     println!("cargo:rerun-if-changed=cpp/");
 }
