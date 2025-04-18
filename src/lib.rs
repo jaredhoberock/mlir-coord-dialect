@@ -19,14 +19,14 @@ pub fn create_coord_to_llvm() -> Pass {
     }
 }
 
-pub fn make_tuple<'c>(loc: Location<'c>, result_ty: Type<'c>, values: &[Value<'c, 'c>]) -> Operation<'c> {
+pub fn make_tuple<'c>(loc: Location<'c>, result_ty: Type<'c>, values: &[Value<'c, '_>]) -> Operation<'c> {
     let op = unsafe {
         coordMakeTupleOpCreate(loc.to_raw(), result_ty.to_raw(), values.as_ptr() as *const _, values.len() as isize)
     };
     unsafe { Operation::from_raw(op) }
 }
 
-pub fn sum<'c>(loc: Location<'c>, lhs: Value<'c, 'c>, rhs: Value<'c, 'c>, result_ty: Type<'c>) -> Operation<'c> {
+pub fn sum<'c>(loc: Location<'c>, lhs: Value<'c, '_>, rhs: Value<'c, '_>, result_ty: Type<'c>) -> Operation<'c> {
     let op = unsafe {
         coordSumOpCreate(loc.to_raw(), lhs.to_raw(), rhs.to_raw(), result_ty.to_raw())
     };
