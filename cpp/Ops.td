@@ -1,13 +1,74 @@
-#ifndef OPTION_OPS_TD
-#define OPTION_OPS_TD
+#ifndef COORD_OPS_TD
+#define COORD_OPS_TD
 
+include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "Dialect.td"
 
 def CoordLike : TypeConstraint<
   CPred<"mlir::coord::isCoordLike($_self)">,
-  "coordinate-compatible type (i64, or tuple of CoordLike elements)">;
+  "coordinate-compatible type (generic !coord.coord, i64, or tuple of CoordLike elements)">;
+
+def MonoCallOp : CoordOp<"mono_call", [
+  CallOpInterface, 
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>
+]> {
+  let summary = "Monomorphizable call to a generic func.func";
+  let description = [{
+    The `coord.mono_call` operation represents a call to a `func.func`
+    whose signature includes at least one generic `!coord.coord` type. The types
+    of the operands and results determine the concrete instantiation.
+
+    Example:
+
+    ```mlir
+    %0 = coord.mono_call @coordinate_sum(%a, %b)
+        : (tuple<i64, i64>, tuple<i64, i64>) -> tuple<i64, i64>
+    ```
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$operands);
+  let results = (outs Variadic<AnyType>);
+
+  let builders = [
+    OpBuilder<(ins "SymbolRefAttr":$callee, "TypeRange":$results,
+               CArg<"ValueRange", "{}">:$operands), [{
+      $_state.addOperands(operands);
+      $_state.addAttribute("callee", callee);
+      $_state.addTypes(results);
+    }]>,
+    OpBuilder<(ins "StringRef":$callee, "TypeRange":$results,
+               CArg<"ValueRange", "{}">:$operands), [{
+      build($_builder, $_state,
+            SymbolRefAttr::get($_builder.getContext(), callee),
+            results, operands);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    operand_range getArgOperands() {
+      return getOperands();
+    }
+
+    MutableOperandRange getArgOperandsMutable() {
+      return getOperandsMutable();
+    }
+
+    CallInterfaceCallable getCallableForCallee() {
+      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+    }
+
+    void setCalleeFromCallable(CallInterfaceCallable callee) {
+      (*this)->setAttr("callee", cast<SymbolRefAttr>(callee));
+    }
+  }];
+
+  let assemblyFormat = [{
+    $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
+  }];
+}
 
 def MakeTupleOp : CoordOp<"make_tuple", [Pure]> {
   let summary = "Construct a coord‑like tuple value";
@@ -45,4 +106,4 @@ def SumOp : CoordOp<"sum", [
   let assemblyFormat = "$lhs `,` $rhs `:` type($result) attr-dict";
 }
 
-#endif // OPTION_OPS_TD
+#endif // COORD_OPS_TD

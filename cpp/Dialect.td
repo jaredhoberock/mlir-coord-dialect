@@ -8,8 +8,15 @@ def CoordDialect : Dialect {
   let summary = "A dialect for tensor coordinate types";
   let cppNamespace = "::mlir::coord";
 
+  let useDefaultTypePrinterParser = 1;
+
+  let extraClassDeclaration = [{
+    void registerTypes();
+  }];
+
   let dependentDialects = [
     "mlir::arith::ArithDialect",
+    "mlir::func::FuncDialect",
     "mlir::vector::VectorDialect"
   ];
 }

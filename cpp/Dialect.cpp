@@ -29,6 +29,8 @@ void CoordDialect::initialize() {
 #include "Ops.cpp.inc"
   >();
 
+  registerTypes();
+
   addInterfaces<
     ConvertToLLVMInterface
   >();

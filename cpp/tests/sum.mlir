@@ -21,3 +21,14 @@ func.func @sum_empty(%arg0: tuple<>, %arg1: tuple<>) -> tuple<> {
   %sum = coord.sum %arg0, %arg1 : tuple<>
   return %sum : tuple<>
 }
+
+// ---- Test 3: generic coord operands
+
+// CHECK-LABEL: func @sum_generic
+// CHECK: %[[SUM:.*]] = coord.sum %arg0, %arg1 : !coord.coord
+// CHECK: return %[[SUM]] : !coord.coord
+
+func.func @sum_generic(%arg0: !coord.coord, %arg1: !coord.coord) -> !coord.coord {
+  %sum = coord.sum %arg0, %arg1 : !coord.coord
+  return %sum : !coord.coord
+}

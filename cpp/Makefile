@@ -9,17 +9,16 @@ CXX := clang++
 CXXFLAGS := -g -fPIC `$(LLVM_CONFIG) --cxxflags`
 
 # LLVM/MLIR libraries
-#MLIR_INCLUDE = /usr/lib/llvm-19/include
 MLIR_INCLUDE = /home/jhoberock/dev/git/llvm-project-20/install/include
 
 INCLUDES := -I $(MLIR_INCLUDE)
 
 # Dialect library sources (everything except main)
-DIALECT_SOURCES := coord_c.cpp Canonicalization.cpp Dialect.cpp Lowering.cpp Ops.cpp
+DIALECT_SOURCES := coord_c.cpp Canonicalization.cpp Dialect.cpp Lowering.cpp Monomorphization.cpp Ops.cpp Types.cpp
 DIALECT_OBJECTS := $(DIALECT_SOURCES:.cpp=.o)
 
 # Generated files
-GENERATED := Dialect.hpp.inc Dialect.cpp.inc Ops.hpp.inc Ops.cpp.inc
+GENERATED := Dialect.hpp.inc Dialect.cpp.inc Ops.hpp.inc Ops.cpp.inc Types.hpp.inc Types.cpp.inc
 
 .PHONY: all clean
 
@@ -37,6 +36,12 @@ Ops.hpp.inc: Ops.td
 
 Ops.cpp.inc: Ops.td
 	$(TBLGEN) --gen-op-defs $(INCLUDES) $< -o $@
+
+Types.hpp.inc: Types.td
+	$(TBLGEN) --gen-typedef-decls $(INCLUDES) $< -o $@
+
+Types.cpp.inc: Types.td
+	$(TBLGEN) --gen-typedef-defs $(INCLUDES) $< -o $@
 
 # Object file rules
 %.o: %.cpp $(GENERATED)
