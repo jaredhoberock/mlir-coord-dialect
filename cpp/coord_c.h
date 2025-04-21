@@ -24,6 +24,12 @@ MlirOperation coordMonoCallOpCreate(MlirLocation loc, MlirStringRef callee,
 MlirOperation coordSumOpCreate(MlirLocation loc, MlirValue lhs, MlirValue rhs,
                                MlirType resultType);
 
+/// Return the !coord.coord type.
+MlirType coordCoordTypeGet(MlirContext ctx);
+
+/// Check whether a type is a !coord.coord type.
+bool coordTypeIsCoord(MlirType type);
+
 #ifdef __cplusplus
 }
 #endif

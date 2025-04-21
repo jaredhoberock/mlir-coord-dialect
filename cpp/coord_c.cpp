@@ -61,4 +61,12 @@ MlirOperation coordSumOpCreate(MlirLocation loc, MlirValue lhs, MlirValue rhs,
   return wrap(op.getOperation());
 }
 
+MlirType coordCoordTypeGet(MlirContext ctx) {
+  return wrap(CoordType::get(unwrap(ctx)));
+}
+
+bool coordTypeIsCoord(MlirType type) {
+  return isa<CoordType>(unwrap(type));
+}
+
 } // end extern "C"

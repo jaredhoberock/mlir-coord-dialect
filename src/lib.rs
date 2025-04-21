@@ -10,6 +10,8 @@ unsafe extern "C" {
                              result_types: *const MlirType, n_results: isize) -> MlirOperation;
     fn coordSumOpCreate(loc: MlirLocation, lhs: MlirValue, rhs: MlirValue, result_ty: MlirType) -> MlirOperation;
     fn coordCreateConvertCoordToLLVMPass() -> MlirPass;
+    fn coordCoordTypeGet(ctx: MlirContext) -> MlirType;
+    fn coordTypeIsCoord(ty: MlirType) -> bool;
 }
 
 pub fn register(context: &Context) {
@@ -54,4 +56,14 @@ pub fn sum<'c>(loc: Location<'c>, lhs: Value<'c, '_>, rhs: Value<'c, '_>, result
         coordSumOpCreate(loc.to_raw(), lhs.to_raw(), rhs.to_raw(), result_ty.to_raw())
     };
     unsafe { Operation::from_raw(op) }
+}
+
+/// Construct the polymorphic `!coord.coord` type.
+pub fn coord_type(context: &Context) -> Type {
+    unsafe { Type::from_raw(coordCoordTypeGet(context.to_raw())) }
+}
+
+/// Check whether a type is the polymorphic `!coord.coord` type.
+pub fn is_coord_type(ty: Type) -> bool {
+    unsafe { coordTypeIsCoord(ty.to_raw()) }
 }
