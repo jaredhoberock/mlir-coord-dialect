@@ -36,21 +36,21 @@ void CoordDialect::initialize() {
   >();
 }
 
-//#include <llvm/Support/raw_ostream.h>
-//#include <llvm/Support/CommandLine.h>
-//#include <llvm/Support/Debug.h>
-//
-//// Insert the static initializer in an anonymous namespace:
-//namespace {
-//struct ForceDebugOptions {
-//  ForceDebugOptions() {
-//    // Supply the command-line arguments you want to force.
-//    // This forces MLIR's debug options, for example, "-debug-only=dialect-conversion".
-//    const char *argv[] = {"coord_plugin", "-debug-only=dialect-conversion"};
-//    llvm::cl::ParseCommandLineOptions(2, argv, "Force MLIR debug options\n");
-//    llvm::dbgs() << "Forced debug-only=dialect-conversion\n";
-//  }
-//};
-//// Create a static instance to invoke the constructor at load time.
-//static ForceDebugOptions forceDebugOptions;
-//} // end anonymous namespace
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/Support/CommandLine.h>
+#include <llvm/Support/Debug.h>
+
+// Insert the static initializer in an anonymous namespace:
+namespace {
+struct ForceDebugOptions {
+  ForceDebugOptions() {
+    // Supply the command-line arguments you want to force.
+    // This forces MLIR's debug options, for example, "-debug-only=dialect-conversion".
+    const char *argv[] = {"coord_plugin", "-debug-only=dialect-conversion"};
+    llvm::cl::ParseCommandLineOptions(2, argv, "Force MLIR debug options\n");
+    llvm::dbgs() << "Forced debug-only=dialect-conversion\n";
+  }
+};
+// Create a static instance to invoke the constructor at load time.
+static ForceDebugOptions forceDebugOptions;
+} // end anonymous namespace
