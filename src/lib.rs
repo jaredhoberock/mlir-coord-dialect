@@ -1,5 +1,5 @@
-use melior::{ir::{Location, Type, TypeLike, Value, ValueLike, Operation}, pass::Pass, Context, StringRef};
-use mlir_sys::{MlirContext, MlirLocation, MlirOperation, MlirPass, MlirStringRef, MlirType, MlirValue};
+use melior::{ir::{Location, Type, TypeLike, Value, ValueLike, Operation}, Context, StringRef};
+use mlir_sys::{MlirContext, MlirLocation, MlirOperation, MlirStringRef, MlirType, MlirValue};
 
 #[link(name = "coord_dialect")]
 unsafe extern "C" {
@@ -9,19 +9,12 @@ unsafe extern "C" {
                              arguments: *const MlirValue, n_arguments: isize,
                              result_types: *const MlirType, n_results: isize) -> MlirOperation;
     fn coordSumOpCreate(loc: MlirLocation, lhs: MlirValue, rhs: MlirValue, result_ty: MlirType) -> MlirOperation;
-    fn coordCreateConvertCoordToLLVMPass() -> MlirPass;
     fn coordCoordTypeGet(ctx: MlirContext) -> MlirType;
     fn coordTypeIsCoord(ty: MlirType) -> bool;
 }
 
 pub fn register(context: &Context) {
     unsafe { coordRegisterDialect(context.to_raw()) }
-}
-
-pub fn create_coord_to_llvm() -> Pass {
-    unsafe {
-        Pass::from_raw(coordCreateConvertCoordToLLVMPass())
-    }
 }
 
 pub fn make_tuple<'c>(loc: Location<'c>, result_ty: Type<'c>, values: &[Value<'c, '_>]) -> Operation<'c> {
