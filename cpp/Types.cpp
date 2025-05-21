@@ -10,7 +10,7 @@ using namespace mlir::coord;
 #define GET_TYPEDEF_CLASSES
 #include "Types.cpp.inc"
 
-bool CoordType::matches(Type ty) const {
+bool CoordType::matches(Type ty, ModuleOp) const {
   return isCoordLike(ty);
 }
 
