@@ -11,65 +11,6 @@ def CoordLike : TypeConstraint<
   CPred<"mlir::coord::isCoordLike($_self)">,
   "coordinate-compatible type (generic !coord.coord, i64, or tuple of CoordLike elements)">;
 
-def MonoCallOp : CoordOp<"mono_call", [
-  CallOpInterface, 
-  DeclareOpInterfaceMethods<SymbolUserOpInterface>
-]> {
-  let summary = "Monomorphizable call to a generic func.func";
-  let description = [{
-    The `coord.mono_call` operation represents a call to a `func.func`
-    whose signature includes at least one generic `!coord.coord` type. The types
-    of the operands and results determine the concrete instantiation.
-
-    Example:
-
-    ```mlir
-    %0 = coord.mono_call @coordinate_sum(%a, %b)
-        : (tuple<i64, i64>, tuple<i64, i64>) -> tuple<i64, i64>
-    ```
-  }];
-
-  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$operands);
-  let results = (outs Variadic<AnyType>);
-
-  let builders = [
-    OpBuilder<(ins "SymbolRefAttr":$callee, "TypeRange":$results,
-               CArg<"ValueRange", "{}">:$operands), [{
-      $_state.addOperands(operands);
-      $_state.addAttribute("callee", callee);
-      $_state.addTypes(results);
-    }]>,
-    OpBuilder<(ins "StringRef":$callee, "TypeRange":$results,
-               CArg<"ValueRange", "{}">:$operands), [{
-      build($_builder, $_state,
-            SymbolRefAttr::get($_builder.getContext(), callee),
-            results, operands);
-    }]>
-  ];
-
-  let extraClassDeclaration = [{
-    operand_range getArgOperands() {
-      return getOperands();
-    }
-
-    MutableOperandRange getArgOperandsMutable() {
-      return getOperandsMutable();
-    }
-
-    CallInterfaceCallable getCallableForCallee() {
-      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
-    }
-
-    void setCalleeFromCallable(CallInterfaceCallable callee) {
-      (*this)->setAttr("callee", cast<SymbolRefAttr>(callee));
-    }
-  }];
-
-  let assemblyFormat = [{
-    $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
-  }];
-}
-
 def MakeTupleOp : CoordOp<"make_tuple", [Pure]> {
   let summary = "Construct a coord‑like tuple value";
   let description = [{

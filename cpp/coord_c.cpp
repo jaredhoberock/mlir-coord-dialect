@@ -29,27 +29,6 @@ MlirOperation coordMakeTupleOpCreate(MlirLocation loc, MlirType resultType,
   return wrap(op.getOperation());
 }
 
-MlirOperation coordMonoCallOpCreate(MlirLocation loc, MlirStringRef callee,
-                                    MlirValue* arguments, intptr_t nArguments,
-                                    MlirType* resultTypes, intptr_t nResults) {
-  MLIRContext* ctx = unwrap(loc)->getContext();
-  OpBuilder builder(ctx);
-
-  SmallVector<Value> args;
-  for (intptr_t i = 0; i < nArguments; ++i)
-    args.push_back(unwrap(arguments[i]));
-
-  SmallVector<Type> results;
-  for (intptr_t i = 0; i < nResults; ++i)
-    results.push_back(unwrap(resultTypes[i]));
-
-  auto calleeAttr = SymbolRefAttr::get(ctx, StringRef(callee.data, callee.length));
-
-  auto op = builder.create<MonoCallOp>(unwrap(loc), calleeAttr, results, args);
-
-  return wrap(op.getOperation());
-}
-
 MlirOperation coordSumOpCreate(MlirLocation loc, MlirValue lhs, MlirValue rhs,
                                MlirType resultType) {
   MLIRContext* ctx = unwrap(loc)->getContext();

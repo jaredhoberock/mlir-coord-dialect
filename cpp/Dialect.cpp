@@ -8,6 +8,7 @@
 #include <mlir/Dialect/Vector/IR/VectorOps.h>
 #include <mlir/IR/Builders.h>
 #include <mlir/IR/OpImplementation.h>
+#include <mlir-trait-dialect/cpp/Dialect.hpp>
 
 #include "Dialect.cpp.inc"
 

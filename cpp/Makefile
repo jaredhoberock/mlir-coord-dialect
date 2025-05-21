@@ -11,10 +11,13 @@ CXXFLAGS := -g -fPIC `$(LLVM_CONFIG) --cxxflags`
 # LLVM/MLIR libraries
 MLIR_INCLUDE = /home/jhoberock/dev/git/llvm-project-20/install/include
 
-INCLUDES := -I $(MLIR_INCLUDE)
+# Trait dialect include
+TRAIT_DIALECT_INCLUDE = /home/jhoberock/dev/git
+
+INCLUDES := -I $(MLIR_INCLUDE) -I $(TRAIT_DIALECT_INCLUDE)
 
 # Dialect library sources (everything except main)
-DIALECT_SOURCES := coord_c.cpp Canonicalization.cpp Dialect.cpp Lowering.cpp Monomorphization.cpp Ops.cpp Types.cpp
+DIALECT_SOURCES := coord_c.cpp Canonicalization.cpp Dialect.cpp Lowering.cpp Ops.cpp Types.cpp
 DIALECT_OBJECTS := $(DIALECT_SOURCES:.cpp=.o)
 
 # Generated files

@@ -10,6 +10,10 @@ using namespace mlir::coord;
 #define GET_TYPEDEF_CLASSES
 #include "Types.cpp.inc"
 
+bool CoordType::matches(Type ty) const {
+  return isCoordLike(ty);
+}
+
 void CoordDialect::registerTypes() {
   addTypes<
 #define GET_TYPEDEF_LIST

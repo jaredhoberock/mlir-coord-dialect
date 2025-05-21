@@ -1,6 +1,5 @@
 #include "Dialect.hpp"
 #include "Lowering.hpp"
-#include "Monomorphization.hpp"
 #include "Ops.hpp"
 #include <mlir/Conversion/ArithToLLVM/ArithToLLVM.h>
 #include <mlir/Conversion/LLVMCommon/TypeConverter.h>
@@ -97,7 +96,6 @@ struct MakeTupleOpLowering : OpConversionPattern<MakeTupleOp> {
   }
 };
 
-
 struct SumOpLowering : public OpConversionPattern<SumOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -123,76 +121,6 @@ struct SumOpLowering : public OpConversionPattern<SumOp> {
   }
 };
 
-
-struct MonomorphizeModule : OpConversionPattern<ModuleOp> {
-  using OpConversionPattern::OpConversionPattern;
-
-  LogicalResult matchAndRewrite(ModuleOp module, OpAdaptor,
-                                ConversionPatternRewriter &rewriter) const override {
-    // Collect all mono_call ops in the module
-    SmallVector<MonoCallOp> calls;
-    module.walk([&](MonoCallOp call) {
-      calls.push_back(call);
-    });
-
-    // collect polymorphs and their monomorphs instantiated by `coord.mono_call` operations
-    std::set<func::FuncOp> polymorphs;
-    DenseMap<std::pair<func::FuncOp, Type>, func::FuncOp> monomorphs;
-
-    // replace each coord.mono_call with func.call to an instantiated monomorph
-    for (MonoCallOp call : calls) {
-      auto calleeAttr = call.getCalleeAttr();
-      auto polymorph = SymbolTable::lookupNearestSymbolFrom<func::FuncOp>(call, calleeAttr);
-
-      if (!polymorph)
-        return call.emitOpError("could not find polymorphic callee");
-
-      polymorphs.insert(polymorph);
-
-      // XXX TODO generalize this
-      Type concreteType = call.getOperandTypes().front();
-
-      auto key = std::make_pair(polymorph, concreteType);
-      func::FuncOp monomorph;
-
-      if (auto it = monomorphs.find(key); it != monomorphs.end()) {
-        monomorph = it->second;
-      } else {
-        func::FuncOp orphanMonomorph = monomorphize(polymorph, concreteType);
-        if (!orphanMonomorph)
-          return call.emitOpError("monomorphization failed");
-
-        // clone the orphan monomorph using the rewriter to ensure it and its body
-        // operations become visible to the lowering process
-        rewriter.setInsertionPoint(polymorph);
-        monomorphs[key] = monomorph = cast<func::FuncOp>(rewriter.clone(*orphanMonomorph));
-
-        // we no longer need the orphanMonomorph
-        orphanMonomorph.erase();
-      }
-
-      // Replace MonoCallOp with func.call to monomorph
-      rewriter.setInsertionPoint(call);
-      auto newCall = rewriter.create<func::CallOp>(
-          call.getLoc(), monomorph.getSymNameAttr(),
-          monomorph.getFunctionType().getResults(),
-          call.getOperands());
-
-      rewriter.replaceOp(call, newCall);
-    }
-
-    // after all coord.mono_calls are replaced, it should be safe to erase polymorphs
-    // XXX TODO in general, there can be other users of the polymorphs
-    //          somehow we need to monomorphize other possible uses
-    for (func::FuncOp polymorph : polymorphs) {
-      rewriter.eraseOp(polymorph);
-    }
-
-    return success();
-  }
-};
-
-
 void populateCoordToLLVMConversionPatterns(LLVMTypeConverter& typeConverter, RewritePatternSet& patterns) {
   // add a type conversion for TupleTypes that are CoordLike
   typeConverter.addConversion([&](TupleType tupleTy) -> std::optional<Type> {
@@ -215,7 +143,6 @@ void populateCoordToLLVMConversionPatterns(LLVMTypeConverter& typeConverter, Rew
   // lower ops
   patterns.add<
     MakeTupleOpLowering,
-    MonomorphizeModule,
     SumOpLowering
   >(typeConverter, patterns.getContext());
 

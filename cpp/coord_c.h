@@ -15,11 +15,6 @@ void coordRegisterDialect(MlirContext ctx);
 MlirOperation coordMakeTupleOpCreate(MlirLocation loc, MlirType resultType,
                                      MlirValue* elements, intptr_t nElements);
 
-/// Create a coord.mono_call operation.
-MlirOperation coordMonoCallOpCreate(MlirLocation loc, MlirStringRef callee,
-                                    MlirValue* arguments, intptr_t nArguments,
-                                    MlirType* resultTypes, intptr_t nResults);
-
 /// Create a coord.sum operation.
 MlirOperation coordSumOpCreate(MlirLocation loc, MlirValue lhs, MlirValue rhs,
                                MlirType resultType);
