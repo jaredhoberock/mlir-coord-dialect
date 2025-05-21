@@ -39,7 +39,7 @@ def CoordType : TypeDef<CoordDialect, "Coord", [SymbolicMatcherInterface]> {
 
   let extraClassDeclaration = [{
     // for SymbolicMatcherInterface
-    bool matches(::mlir::Type ty, ::mlir::ModuleOp module) const;
+    bool matches(::mlir::Type ty, ::mlir::trait::TraitOp& trait) const;
   }];
 
   let mnemonic = "coord";
