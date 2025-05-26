@@ -1,4 +1,4 @@
-// RUN: opt %s | FileCheck %s
+// RUN: mlir-opt %s | FileCheck %s
 
 // ---- Test 1: i64 operands
 

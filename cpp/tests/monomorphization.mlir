@@ -1,4 +1,4 @@
-// RUN: opt -pass-pipeline='builtin.module(monomorphize-trait,convert-to-llvm)' %s | FileCheck %s
+// RUN: mlir-opt -pass-pipeline='builtin.module(monomorphize-trait,convert-to-llvm)' %s | FileCheck %s
 
 trait.trait @Coord {
   func.func private @sum(!trait.self, !trait.self) -> !trait.self 

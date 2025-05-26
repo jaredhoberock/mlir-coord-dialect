@@ -5,10 +5,8 @@
 #include <mlir/Conversion/LLVMCommon/TypeConverter.h>
 #include <mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h>
 #include <mlir/Dialect/Arith/IR/Arith.h>
-#include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Dialect/Vector/IR/VectorOps.h>
 #include <mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h>
-#include <mlir/Transforms/DialectConversion.h>
 
 using namespace mlir;
 
@@ -25,76 +23,6 @@ static int64_t countI64Leaves(TupleType tup) {
   }
   return n;
 }
-
-struct MakeTupleOpLowering : OpConversionPattern<MakeTupleOp> {
-  using OpConversionPattern::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(MakeTupleOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Location loc = op.getLoc();
-
-    // count the number of i64 leaves
-    int64_t N = countI64Leaves(cast<TupleType>(op.getType()));
-
-    // special case: tuple<> lowers to i1
-    if (N == 0) {
-      Type i1Ty = rewriter.getIntegerType(1);
-      Value zero = rewriter.create<arith::ConstantOp>(loc, i1Ty, rewriter.getIntegerAttr(i1Ty, 0));
-      rewriter.replaceOp(op, zero);
-      return success();
-    }
-
-    // create result vector type
-    auto i64Ty = rewriter.getIntegerType(64);
-    auto resultVectorTy = VectorType::get({N}, i64Ty);
-
-    // Begin from a single zero value across the entire vector
-    auto zero = rewriter.create<arith::ConstantOp>(loc, i64Ty, rewriter.getIntegerAttr(i64Ty, 0));
-    Value result = rewriter.create<vector::SplatOp>(loc, resultVectorTy, zero);
-
-    // Insert operands into the result vector
-    int64_t offset = 0;
-    for (Value operand : adaptor.getOperands()) {
-      // check the type of the lowered operand
-      Type operandTy = operand.getType();
-
-      if (!operandTy.isInteger(64) && !operandTy.isInteger(1) &&
-          !(isa<VectorType>(operandTy) && cast<VectorType>(operandTy).getElementType().isInteger(64))) {
-        return rewriter.notifyMatchFailure(op, "operand must be i1, i64, or vector<Nxi64>");
-      }
-
-      // skip i1 (empty tuple) operands, they contribute no elements
-      if (operandTy.isInteger(1)) {
-        continue;
-      }
-
-      // if operand is a vector, use vector.insert_strided_slice
-      if (auto vecTy = dyn_cast<VectorType>(operandTy)) {
-        int64_t numElements = vecTy.getNumElements();
-        SmallVector<int64_t> offsets = {offset};
-        SmallVector<int64_t> strides = {1};
-
-        result = rewriter.create<vector::InsertStridedSliceOp>(
-          loc, 
-          operand, 
-          result, 
-          offsets, 
-          strides
-        );
-
-        offset += numElements;
-      } else {
-        // For scalar i64, use vector.insert
-        result = rewriter.create<vector::InsertOp>(loc, operand, result, offset);
-        offset += 1;
-      }
-    }
-
-    rewriter.replaceOp(op, result);
-    return success();
-  }
-};
 
 struct SumOpLowering : public OpConversionPattern<SumOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -142,7 +70,6 @@ void populateCoordToLLVMConversionPatterns(LLVMTypeConverter& typeConverter, Rew
 
   // lower ops
   patterns.add<
-    MakeTupleOpLowering,
     SumOpLowering
   >(typeConverter, patterns.getContext());
 
