@@ -10,8 +10,11 @@ using namespace mlir::coord;
 #define GET_TYPEDEF_CLASSES
 #include "Types.cpp.inc"
 
-bool CoordType::matches(Type ty, ModuleOp) const {
-  return isCoordLike(ty);
+LogicalResult CoordType::unifyWith(Type ty, ModuleOp, llvm::function_ref<InFlightDiagnostic()> emitError) const {
+  if (!isCoordLike(ty)) {
+    return emitError() << "'" << ty << "' is not coord-like";
+  }
+  return success();
 }
 
 void CoordDialect::registerTypes() {

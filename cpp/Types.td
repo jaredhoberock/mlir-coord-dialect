@@ -5,7 +5,7 @@ include "mlir/IR/AttrTypeBase.td"
 include "mlir-trait-dialect/cpp/TypeInterfaces.td"
 include "Dialect.td"
 
-def CoordType : TypeDef<CoordDialect, "Coord", [SymbolicMatcherInterface]> {
+def CoordType : TypeDef<CoordDialect, "Coord", [SymbolicTypeUnificationInterface]> {
   let summary = "Placeholder type representing any type satisfying the Coord trait";
   let description = [{
     The `!coord.coord` type is a symbolic type used to provide a generic `trait.impl`s
@@ -38,8 +38,8 @@ def CoordType : TypeDef<CoordDialect, "Coord", [SymbolicMatcherInterface]> {
   }];
 
   let extraClassDeclaration = [{
-    // for SymbolicMatcherInterface
-    bool matches(::mlir::Type ty, ModuleOp module) const;
+    // for SymbolicTypeUnificationInterface
+    LogicalResult unifyWith(Type ty, ModuleOp module, llvm::function_ref<InFlightDiagnostic()> emitError) const;
   }];
 
   let mnemonic = "coord";
