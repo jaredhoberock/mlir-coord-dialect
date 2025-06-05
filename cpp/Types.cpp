@@ -10,10 +10,7 @@ using namespace mlir::coord;
 #define GET_TYPEDEF_CLASSES
 #include "Types.cpp.inc"
 
-bool CoordType::matches(Type ty, mlir::trait::TraitOp&) const {
-  // we assume that the trait doing the query is @Coord
-  // isCoordLike depends only on the structure of ty,
-  // so we can ignore the trait
+bool CoordType::matches(Type ty, ModuleOp) const {
   return isCoordLike(ty);
 }
 
