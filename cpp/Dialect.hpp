@@ -13,7 +13,7 @@ inline bool isCoordLike(Type ty) {
     return true;
   }
 
-  if (ty.isInteger(64)) {
+  if (ty.isInteger()) {
     return true;
   }
 

@@ -15,10 +15,7 @@ def CoordDialect : Dialect {
   }];
 
   let dependentDialects = [
-    "mlir::arith::ArithDialect",
-    "mlir::func::FuncDialect",
-    "mlir::trait::TraitDialect",
-    "mlir::vector::VectorDialect"
+    "mlir::tuple::TupleDialect"
   ];
 }
 

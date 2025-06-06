@@ -1,26 +1,23 @@
+#include "ConvertToTrait.hpp"
 #include "Dialect.hpp"
 #include "Ops.hpp"
-#include "Lowering.hpp"
 #include <llvm/ADT/STLExtras.h>
 #include <iostream>
 #include <mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h>
-#include <mlir/Dialect/Arith/IR/Arith.h>
-#include <mlir/Dialect/Vector/IR/VectorOps.h>
 #include <mlir/IR/Builders.h>
 #include <mlir/IR/OpImplementation.h>
+#include <mlir-tuple-dialect/cpp/Dialect.hpp>
 #include <mlir-trait-dialect/cpp/Dialect.hpp>
 
 #include "Dialect.cpp.inc"
 
 namespace mlir::coord {
 
-struct ConvertToLLVMInterface : public mlir::ConvertToLLVMPatternInterface {
-  using mlir::ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+struct ConvertToTraitInterface : public mlir::trait::ConvertToTraitPatternInterface {
+  using mlir::trait::ConvertToTraitPatternInterface::ConvertToTraitPatternInterface;
 
-  void populateConvertToLLVMConversionPatterns(ConversionTarget& target,
-                                               LLVMTypeConverter& typeConverter,
-                                               RewritePatternSet& patterns) const override final {
-    populateCoordToLLVMConversionPatterns(typeConverter, patterns);
+  void populateConvertToTraitConversionPatterns(RewritePatternSet& patterns) const override final {
+    populateCoordToTraitConversionPatterns(patterns);
   }
 };
 
@@ -33,7 +30,7 @@ void CoordDialect::initialize() {
   registerTypes();
 
   addInterfaces<
-    ConvertToLLVMInterface
+    ConvertToTraitInterface
   >();
 }
 

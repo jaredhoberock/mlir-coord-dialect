@@ -17,7 +17,7 @@ TRAIT_DIALECT_INCLUDE = /home/jhoberock/dev/git
 INCLUDES := -I $(MLIR_INCLUDE) -I $(TRAIT_DIALECT_INCLUDE)
 
 # Dialect library sources (everything except main)
-DIALECT_SOURCES := coord_c.cpp Canonicalization.cpp Dialect.cpp Lowering.cpp Ops.cpp Types.cpp
+DIALECT_SOURCES := coord_c.cpp Canonicalization.cpp ConvertToTrait.cpp Dialect.cpp Ops.cpp Types.cpp
 DIALECT_OBJECTS := $(DIALECT_SOURCES:.cpp=.o)
 
 # Generated files

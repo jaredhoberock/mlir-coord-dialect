@@ -16,7 +16,7 @@ trait.impl @Coord for !coord.coord {
 // CHECK-LABEL: func @sum_empty_tuple
 // CHECK-NOT: builtin.unrealized_conversion_cast
 // CHECK: llvm.return
-// CHECK: i1
+// CHECK: !llvm.struct<()>
 func.func @sum_empty_tuple(%a: tuple<>, %b: tuple<>) -> tuple<> {
   %0 = trait.method.call @Coord::@sum<tuple<>>(%a, %b) : (!trait.self, !trait.self) -> !trait.self to (tuple<>,tuple<>) -> tuple<>
   return %0 : tuple<>
@@ -39,7 +39,7 @@ func.func @sum_scalar(%a: i64, %b: i64) -> i64 {
 // CHECK-LABEL: func @sum_pair
 // CHECK-NOT: builtin.unrealized_conversion_cast
 // CHECK: llvm.call @"__trait_Coord_impl_tuple
-// CHECK: vector<2xi64>
+// CHECK: !llvm.struct<(i64, i64)>
 // CHECK: llvm.return
 func.func @sum_pair(%a: tuple<i64,i64>, %b: tuple<i64,i64>) -> tuple<i64,i64> {
   %0 = trait.method.call @Coord::@sum<tuple<i64,i64>>(%a, %b) : (!trait.self, !trait.self) -> !trait.self to (tuple<i64,i64>,tuple<i64,i64>) -> tuple<i64,i64>
@@ -51,7 +51,7 @@ func.func @sum_pair(%a: tuple<i64,i64>, %b: tuple<i64,i64>) -> tuple<i64,i64> {
 // CHECK-LABEL: func @sum_nested
 // CHECK-NOT: builtin.unrealized_conversion_cast
 // CHECK: llvm.call @"__trait_Coord_impl_tuple
-// CHECK: vector<3xi64>
+// CHECK: !llvm.struct<(i64, struct<(i64, i64)>)>
 // CHECK: llvm.return
 !T = tuple<i64,tuple<i64,i64>>
 func.func @sum_nested(%a: !T, %b: !T) -> !T {

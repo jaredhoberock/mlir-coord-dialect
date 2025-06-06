@@ -9,7 +9,7 @@ include "Dialect.td"
 
 def CoordLike : TypeConstraint<
   CPred<"mlir::coord::isCoordLike($_self)">,
-  "coordinate-compatible type (generic !coord.coord, i64, or tuple of CoordLike elements)">;
+  "coordinate-compatible type (generic !coord.coord, integer, or tuple of CoordLike elements)">;
 
 def SumOp : CoordOp<"sum", [
   Pure,
