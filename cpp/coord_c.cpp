@@ -14,12 +14,23 @@ void coordRegisterDialect(MlirContext context) {
   unwrap(context)->loadDialect<CoordDialect>();
 }
 
-MlirOperation coordSumOpCreate(MlirLocation loc, MlirValue lhs, MlirValue rhs,
+MlirOperation coordAddOpCreate(MlirLocation loc, MlirValue lhs, MlirValue rhs,
                                MlirType resultType) {
   MLIRContext* ctx = unwrap(loc)->getContext();
   OpBuilder builder(ctx);
 
-  auto op = builder.create<SumOp>(unwrap(loc),
+  auto op = builder.create<AddOp>(unwrap(loc),
+                                  unwrap(resultType),
+                                  unwrap(lhs), unwrap(rhs));
+  return wrap(op.getOperation());
+}
+
+MlirOperation coordSubOpCreate(MlirLocation loc, MlirValue lhs, MlirValue rhs,
+                               MlirType resultType) {
+  MLIRContext* ctx = unwrap(loc)->getContext();
+  OpBuilder builder(ctx);
+
+  auto op = builder.create<SubOp>(unwrap(loc),
                                   unwrap(resultType),
                                   unwrap(lhs), unwrap(rhs));
   return wrap(op.getOperation());

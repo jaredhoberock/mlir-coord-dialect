@@ -9,10 +9,10 @@ using namespace mlir;
 
 namespace mlir::coord {
 
-struct SumOpLowering : public OpRewritePattern<SumOp> {
+struct AddOpLowering : public OpRewritePattern<AddOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(SumOp op, PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(AddOp op, PatternRewriter &rewriter) const override {
 
     MLIRContext* ctx = rewriter.getContext();
     auto loc = op.getLoc();
@@ -21,13 +21,145 @@ struct SumOpLowering : public OpRewritePattern<SumOp> {
     Value rhs = op.getRhs();
     Type operandTy = lhs.getType();
 
-    // terminal case 1: operands are integers, lower to arith.addi
+    // terminal case: operands are integers, lower to arith.addi
     if (operandTy.isInteger()) {
       rewriter.replaceOpWithNewOp<arith::AddIOp>(op, lhs, rhs);
       return success();
     }
 
-    // recursive case: operands are tuples, lower to tuple.map + coord.sum
+    // recursive case: operands are tuples, lower to tuple.map + coord.add
+    if (auto tupleTy = dyn_cast<TupleType>(operandTy)) {
+      // create tuple.map
+      auto mapOp = rewriter.create<tuple::MapOp>(
+        loc,
+        tupleTy,
+        ValueRange{lhs, rhs}
+      );
+
+      // create the region with recursive coord.add
+      Block* block = rewriter.createBlock(&mapOp.getBody());
+      rewriter.setInsertionPointToStart(block);
+
+      // block arguments are !coord.coord
+      CoordType coordTy = CoordType::get(ctx);
+      block->addArguments({coordTy, coordTy}, {loc, loc});
+
+      // %res = coord.add %lhs_elem, %rhs_elem : !coord.coord
+      Value res = rewriter.create<AddOp>(
+        loc,
+        coordTy,
+        block->getArgument(0),  // lhs element
+        block->getArgument(1)); // rhs element
+
+      // yield %res : !coord.coord
+      rewriter.create<tuple::YieldOp>(loc, res);
+
+      assert(succeeded(mapOp.verify()));
+
+      // replace the original operation
+      rewriter.replaceOp(op, mapOp.getResult());
+      return success();
+    }
+
+    return rewriter.notifyMatchFailure(op, "unsuppored operand type for coord.add");
+  }
+};
+
+struct InnerProductOpLowering : public OpRewritePattern<InnerProductOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(InnerProductOp op, PatternRewriter &rewriter) const override {
+    MLIRContext* ctx = rewriter.getContext();
+    auto loc = op.getLoc();
+
+    Value lhs = op.getLhs();
+    Value rhs = op.getRhs();
+    Type operandTy = lhs.getType();
+
+    // terminal case: operands are integers, lower to arith.muli
+    if (operandTy.isInteger()) {
+      rewriter.replaceOpWithNewOp<arith::MulIOp>(op, lhs, rhs);
+      return success();
+    }
+
+    // recursive case: operands are tuples, lower to tuple.foldl + coord.inner_product
+    if (auto tupleTy = dyn_cast<TupleType>(operandTy)) {
+      // %init = arith.constant 0 : i64
+      // %res = tuple.fold %init, %lhs, %rhs : i64, tuple<..>, tuple<..> -> i64 {
+      // ^bb0(%acc: i64, %a: !coord.coord, %b: !coord.coord):
+      //   %prod = coord.inner_product %a, %b : !coord.coord
+      //   %res = arith.addi %acc, %prod : i64
+      //   yield %res: i64
+      // }
+
+      auto i64Ty = rewriter.getIntegerType(64);
+
+      // %init = arith.constant 0 : i64
+      Value init = rewriter.create<arith::ConstantOp>(
+        loc,
+        rewriter.getIntegerAttr(i64Ty, 0)
+      );
+
+      // create tuple.foldl
+      auto foldlOp = rewriter.create<tuple::FoldlOp>(
+        loc,
+        i64Ty,
+        ValueRange{init, lhs, rhs}
+      );
+
+      // create the region with recursive coord.inner_product
+      Block* block = rewriter.createBlock(&foldlOp.getBody());
+      rewriter.setInsertionPointToStart(block);
+
+      // block arguments are i64, !coord.coord, !coord.coord
+      CoordType coordTy = CoordType::get(ctx);
+      block->addArguments({i64Ty, coordTy, coordTy}, {loc, loc, loc});
+
+      // %prod = coord.inner_product %lhs_elem, %rhs_elem : i64
+      Value prod = rewriter.create<InnerProductOp>(
+        loc,
+        block->getArgument(1),  // lhs element
+        block->getArgument(2)); // rhs element
+
+      // %res = arith.addi %acc, %prod : i64
+      Value res = rewriter.create<arith::AddIOp>(
+        loc,
+        block->getArgument(0), // acc
+        prod);
+
+      // yield %res : i64
+      rewriter.create<tuple::YieldOp>(loc, res);
+
+      assert(succeeded(foldlOp.verify()));
+
+      // replace the original operation
+      rewriter.replaceOp(op, foldlOp.getResult());
+      return success();
+    }
+
+    return rewriter.notifyMatchFailure(op, "unsupported operand type for coord.inner_product");
+  }
+};
+
+struct SubOpLowering : public OpRewritePattern<SubOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SubOp op, PatternRewriter &rewriter) const override {
+
+    MLIRContext* ctx = rewriter.getContext();
+    auto loc = op.getLoc();
+
+    Value lhs = op.getLhs();
+    Value rhs = op.getRhs();
+    Type operandTy = lhs.getType();
+
+    // terminal case: operands are integers, lower to arith.subi
+    if (operandTy.isInteger()) {
+      rewriter.replaceOpWithNewOp<arith::SubIOp>(op, lhs, rhs);
+      return success();
+    }
+
+    // recursive case: operands are tuples, lower to tuple.map + coord.add
     if (auto tupleTy = dyn_cast<TupleType>(operandTy)) {
       // create tuple.map
       auto mapOp = rewriter.create<tuple::MapOp>(
@@ -44,15 +176,15 @@ struct SumOpLowering : public OpRewritePattern<SumOp> {
       CoordType coordTy = CoordType::get(ctx);
       block->addArguments({coordTy, coordTy}, {loc, loc});
 
-      // %res = coord.sum %lhs_elem, %rhs_elem : !coord.coord
-      Value sum = rewriter.create<SumOp>(
+      // %res = coord.sub %lhs_elem, %rhs_elem : !coord.coord
+      Value res = rewriter.create<SubOp>(
         loc,
         coordTy,
         block->getArgument(0),  // lhs element
         block->getArgument(1)); // rhs element
 
       // yield %res : !coord.coord
-      rewriter.create<tuple::YieldOp>(loc, sum);
+      rewriter.create<tuple::YieldOp>(loc, res);
 
       assert(succeeded(mapOp.verify()));
 
@@ -61,14 +193,16 @@ struct SumOpLowering : public OpRewritePattern<SumOp> {
       return success();
     }
 
-    return rewriter.notifyMatchFailure(op, "unsuppored operand type for coord.sum");
+    return rewriter.notifyMatchFailure(op, "unsuppored operand type for coord.sub");
   }
 };
 
 void populateCoordToTraitConversionPatterns(RewritePatternSet& patterns) {
   // lower ops
   patterns.add<
-    SumOpLowering
+    AddOpLowering,
+    InnerProductOpLowering,
+    SubOpLowering
   >(patterns.getContext());
 }
 

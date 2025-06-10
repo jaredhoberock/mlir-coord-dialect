@@ -11,8 +11,12 @@ extern "C" {
 /// Manually register the coord dialect with a context.
 void coordRegisterDialect(MlirContext ctx);
 
-/// Create a coord.sum operation.
-MlirOperation coordSumOpCreate(MlirLocation loc, MlirValue lhs, MlirValue rhs,
+/// Create a coord.add operation.
+MlirOperation coordAddOpCreate(MlirLocation loc, MlirValue lhs, MlirValue rhs,
+                               MlirType resultType);
+
+/// Create a coord.sub operation.
+MlirOperation coordSubOpCreate(MlirLocation loc, MlirValue lhs, MlirValue rhs,
                                MlirType resultType);
 
 /// Return the !coord.coord type.
