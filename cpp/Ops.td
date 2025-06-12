@@ -10,7 +10,7 @@ include "Dialect.td"
 
 def CoordLike : TypeConstraint<
   CPred<"mlir::coord::isCoordLike($_self)">,
-  "coordinate-compatible type (generic !coord.coord, integer, or tuple of CoordLike elements)">;
+  "coordinate-compatible type (generic !coord.coord, !coord.poly, integer, or tuple of CoordLike elements)">;
 
 def AddOp : CoordOp<"add", [
   Pure,
@@ -18,8 +18,7 @@ def AddOp : CoordOp<"add", [
 ]> {
   let summary = "Sum two `!coord.coord` values";
   let description = [{
-    Sums two `!coord.coord` values.
-    Both operands must have the same shape. The result has the same shape.
+    Sums two coord-like values. Both operands must be the same type.
   }];
 
   let arguments = (ins CoordLike:$lhs, CoordLike:$rhs);

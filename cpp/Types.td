@@ -45,4 +45,25 @@ def CoordType : TypeDef<CoordDialect, "Coord", [SymbolicTypeUnificationInterface
   let mnemonic = "coord";
 }
 
+def PolyType : TypeDef<CoordDialect, "Poly", [SymbolicTypeUnificationInterface]> {
+  let mnemonic = "poly";
+
+  let summary = "Polymorphic symbolic type variable representing a coord-like type";
+  let description = [{
+    The `!coord.poly` type represents a universally quantified type parameter that is
+    constrained to be coord-like. It is used to model generic functions for coordinate types.
+
+    The `unique_id` serves as a unique identifier for this type within the module.
+  }];
+
+  let extraClassDeclaration = [{
+    // for SymbolicTypeUnificationInterface
+    LogicalResult unifyWith(Type ty, ModuleOp module, llvm::function_ref<InFlightDiagnostic()> emitError) const;
+  }];
+
+  let parameters = (ins "int":$unique_id);
+
+  let assemblyFormat = "`<` $unique_id `>`";
+}
+
 #endif // COORD_TYPES_TD

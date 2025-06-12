@@ -32,3 +32,14 @@ func.func @add_generic(%arg0: !coord.coord, %arg1: !coord.coord) -> !coord.coord
   %res = coord.add %arg0, %arg1 : !coord.coord
   return %res : !coord.coord
 }
+
+// ---- Test 4: poly operands
+
+// CHECK-LABEL: func @add_poly
+// CHECK: %[[RES:.*]] = coord.add %arg0, %arg1 : !coord.poly
+// CHECK: return %[[RES]] : !coord.poly
+
+func.func @add_poly(%arg0 : !coord.poly<0>, %arg1: !coord.poly<0>) -> !coord.poly<0> {
+  %res = coord.add %arg0, %arg1 : !coord.poly<0>
+  return %res : !coord.poly<0>
+}

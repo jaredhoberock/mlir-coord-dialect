@@ -17,6 +17,13 @@ LogicalResult CoordType::unifyWith(Type ty, ModuleOp, llvm::function_ref<InFligh
   return success();
 }
 
+LogicalResult PolyType::unifyWith(Type ty, ModuleOp, llvm::function_ref<InFlightDiagnostic()> emitError) const {
+  if (!isCoordLike(ty)) {
+    return emitError() << ty << " is not coord-like";
+  }
+  return success();
+}
+
 void CoordDialect::registerTypes() {
   addTypes<
 #define GET_TYPEDEF_LIST
