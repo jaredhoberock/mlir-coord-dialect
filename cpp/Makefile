@@ -61,7 +61,7 @@ libcoord_dialect.so: $(PLUGIN_OBJECTS)
 .PHONY: test
 test: libcoord_dialect.so
 	@echo "Running coord dialect tests..."
-	./venv/bin/lit tests
+	lit tests
 
 clean:
 	rm -f *.o *.inc *.a *.so
