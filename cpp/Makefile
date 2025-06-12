@@ -21,7 +21,7 @@ DIALECT_SOURCES := coord_c.cpp Canonicalization.cpp ConvertToTrait.cpp Dialect.c
 DIALECT_OBJECTS := $(DIALECT_SOURCES:.cpp=.o)
 
 # Generated files
-GENERATED := Dialect.hpp.inc Dialect.cpp.inc Ops.hpp.inc Ops.cpp.inc Types.hpp.inc Types.cpp.inc
+GENERATED := Dialect.hpp.inc Dialect.cpp.inc Ops.hpp.inc Ops.cpp.inc OpInterfaces.hpp.inc OpInterfaces.cpp.inc Types.hpp.inc Types.cpp.inc
 
 .PHONY: all clean
 
@@ -39,6 +39,12 @@ Ops.hpp.inc: Ops.td
 
 Ops.cpp.inc: Ops.td
 	$(TBLGEN) --gen-op-defs $(INCLUDES) $< -o $@
+
+OpInterfaces.hpp.inc: OpInterfaces.td
+	$(TBLGEN) --gen-op-interface-decls $(INCLUDES) $< -o $@
+
+OpInterfaces.cpp.inc: Ops.td
+	$(TBLGEN) --gen-op-interface-defs $(INCLUDES) $< -o $@
 
 Types.hpp.inc: Types.td
 	$(TBLGEN) --gen-typedef-decls $(INCLUDES) $< -o $@

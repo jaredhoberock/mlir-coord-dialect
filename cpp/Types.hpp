@@ -2,6 +2,7 @@
 
 #include <mlir/IR/BuiltinTypes.h>
 #include <mlir-trait-dialect/cpp/Types.hpp>
+#include <optional>
 #include "Dialect.hpp"
 
 #define GET_TYPEDEF_CLASSES
@@ -9,24 +10,20 @@
 
 namespace mlir::coord {
 
-inline bool isCoordLike(Type ty) {
-  if (isa<CoordType>(ty)) {
-    return true;
-  }
+bool isConcreteCoordLike(Type ty);
 
-  if (isa<PolyType>(ty)) {
-    return true;
-  }
+bool isCoordLike(Type ty);
 
-  if (ty.isInteger()) {
-    return true;
-  }
+bool isCongruentTo(Type a, Type b);
 
-  if (auto tup = dyn_cast<TupleType>(ty)) {
-    return llvm::all_of(tup.getTypes(), isCoordLike);
-  }
+bool areCongruent(TypeRange types);
 
-  return false;
-}
+bool isWeaklyCongruentTo(Type a, Type b);
+
+LogicalResult verifyIsWeaklyCongruentTo(std::optional<Location> loc, Type a, Type b);
+
+Type inferInnerProductReturnType(std::optional<Location> loc, Type a, Type b);
+
+Type inferWeakProductReturnType(std::optional<Location> loc, Type a, Type b);
 
 } // end mlir::coord

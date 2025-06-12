@@ -29,11 +29,11 @@ fn build_run_func<'c>(
 
     let function_type = FunctionType::new(ctx, &[coord_ty, coord_ty], &[coord_ty]);
 
-    // Build the function body: %sum = coord.sum %a, %b
+    // Build the function body: %sum = coord.add %a, %b
     let region = {
         let block = Block::new(&[(coord_ty, loc), (coord_ty, loc)]);
         
-        let sum = block.append_operation(coord::sum(
+        let sum = block.append_operation(coord::add(
             loc, 
             block.argument(0).unwrap().into(),
             block.argument(1).unwrap().into(),
@@ -85,7 +85,7 @@ fn append_invoke_run<'c>(
 }
 
 #[test]
-fn test_coordinate_sum_jit() {
+fn test_coordinate_add_jit() {
     // create a dialect registry and register all dialects
     let registry = DialectRegistry::new();
     register_all_dialects(&registry);

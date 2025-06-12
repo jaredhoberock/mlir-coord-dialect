@@ -5,12 +5,14 @@ include "mlir/IR/AttrTypeBase.td"
 include "mlir-trait-dialect/cpp/TypeInterfaces.td"
 include "Dialect.td"
 
+// XXX TODO I think we should change this to !coord.poly<id>
+//          to allow us to have operations with more than one placeholder type
 def CoordType : TypeDef<CoordDialect, "Coord", [SymbolicTypeUnificationInterface]> {
   let summary = "Placeholder type representing any type satisfying the Coord trait";
   let description = [{
     The `!coord.coord` type is a symbolic type used to provide a generic `trait.impl`s
-    for any coord-like type. It provides the method `bool matches(Type ty)` which will
-    return `true` for any coord-like type.
+    for any coord-like type. It provides the method `unifyWith` which will
+    return `success` for any coord-like type.
 
     For example:
       trait.trait @Coord {

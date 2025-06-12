@@ -7,6 +7,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "Dialect.td"
+include "OpInterfaces.td"
 
 def CoordLike : TypeConstraint<
   CPred<"mlir::coord::isCoordLike($_self)">,
@@ -27,13 +28,33 @@ def AddOp : CoordOp<"add", [
   let assemblyFormat = "$lhs `,` $rhs `:` type($result) attr-dict";
 }
 
-def InnerProductOp : CoordOp<"inner_product", [
+def WeakProductOp : CoordOp<"weak_product", [
   Pure,
-  AllTypesMatch<["lhs", "rhs"]>
+  WeaklyCongruentOpInterface
 ]> {
-  let summary = "Applies an inner product across two `!coord.coord` values";
+  let summary = "Applies a weak product across two coord-like values.";
   let description = [{
-    Applies an inner product across two `!coord.coord` values.
+    Applies a weak product across two coord-like values.
+    If the operands are concrete types, the `lhs` must be weakly congruent to `rhs`.
+  }];
+
+  let arguments = (ins AnyType:$lhs, AnyType:$rhs);
+  let results = (outs AnyType:$result);
+
+  let assemblyFormat = "$lhs `,` $rhs `:` type($lhs) `,` type($rhs) `->` type($result) attr-dict";
+
+  let hasVerifier = 1;
+}
+
+// XXX instead of AllTypesMatch, I think we want to add some interface that says lhs must be congruent to rhs
+// XXX we might need to relax the result type from I64
+def InnerProductOp : CoordOp<"inner_product", [
+  AllTypesMatch<["lhs", "rhs"]>,
+  Pure
+]> {
+  let summary = "Applies an inner product across two coord-like values";
+  let description = [{
+    Applies an inner product across two coord-like values.
     Both operands must have the same shape. The result is `i64`.
   }];
 

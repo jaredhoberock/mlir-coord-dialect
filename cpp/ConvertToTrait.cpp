@@ -1,6 +1,7 @@
 #include "ConvertToTrait.hpp"
 #include "Dialect.hpp"
 #include "Ops.hpp"
+#include "Types.hpp"
 #include <mlir/Conversion/LLVMCommon/TypeConverter.h>
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir-tuple-dialect/cpp/Ops.hpp>
@@ -137,7 +138,7 @@ struct InnerProductOpLowering : public OpRewritePattern<InnerProductOp> {
       return success();
     }
 
-    return rewriter.notifyMatchFailure(op, "unsupported operand type for coord.inner_product");
+    return rewriter.notifyMatchFailure(op, "unsupported operand types for coord.inner_product");
   }
 };
 
@@ -214,8 +215,7 @@ struct ZeroOpLowering : public OpRewritePattern<ZeroOp> {
       return success();
     }
 
-    TupleType tupleTy = dyn_cast<TupleType>(resultTy);
-    if (tupleTy) {
+    if (auto tupleTy = dyn_cast<TupleType>(resultTy)) {
       // emit a coord.zero op for each tuple element
       SmallVector<Value> elements;
       for (Type ty : tupleTy.getTypes()) {
@@ -239,12 +239,185 @@ struct ZeroOpLowering : public OpRewritePattern<ZeroOp> {
   }
 };
 
+struct WeakProductOpLowering : public OpRewritePattern<WeakProductOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(WeakProductOp op, PatternRewriter &rewriter) const override {
+    MLIRContext* ctx = rewriter.getContext();
+    auto loc = op.getLoc();
+
+    Type lhsTy = op.getLhs().getType();
+    Type rhsTy = op.getRhs().getType();
+
+    // if operand types are symbolic, this operation isn't ready to be rewritten
+    if (trait::containsSymbolicType(lhsTy) or trait::containsSymbolicType(rhsTy))
+      return rewriter.notifyMatchFailure(op, "operand types are still symbolic");
+
+    // if lhs & rhs are congruent:
+    // coord.weak_product -> coord.inner_product
+    if (isCongruentTo(lhsTy, rhsTy)) {
+      rewriter.replaceOpWithNewOp<InnerProductOp>(
+        op,
+        op.getLhs(),
+        op.getRhs()
+      );
+
+      return success();
+    }
+
+    // if lhsTy is an integer then rhsTy must be a tuple:
+    // coord.weak_product -> tuple.map + coord.weak_product
+    if (lhsTy.isInteger()) {
+      // %res = tuple.map %rhs : !Rhs -> !R {
+      // ^bb0(%e: !coord.poly<0>):
+      //   %res = coord.weak_product %lhs, %e : !Lhs, !coord.poly<0> -> !coord.poly<1>
+      //   yield %res : !coord.poly<1>
+      // }
+      auto mapOp = rewriter.create<tuple::MapOp>(
+        loc,
+        op.getResult().getType(),
+        op.getRhs());
+
+      // create the region with recursive coord.weak_product
+      Block* block = rewriter.createBlock(&mapOp.getBody());
+      rewriter.setInsertionPointToStart(block);
+
+      // block argument is !coord.poly<0>
+      // XXX TODO do we need to use a fresh poly type or not?
+      block->addArguments({PolyType::get(ctx, 0)}, {loc});
+
+      // %res = coord.weak_product %lhs, %e : !Lhs, !coord.poly<0> -> !coord.poly<1>
+      Value res = rewriter.create<WeakProductOp>(
+        loc,
+        PolyType::get(ctx, 1),    // !coord.poly<1>
+        op.getLhs(),              // %lhs : i64
+        block->getArgument(0));   // %e : !coord.poly<0>
+
+      // yield %res
+      rewriter.create<tuple::YieldOp>(loc, res);
+
+      // replace the original operation
+      rewriter.replaceOp(op, mapOp.getResult());
+      return success();
+    }
+
+    // otherwise, lhsTy and rhsTy must be two equal-rank tuples
+    TupleType lhsTupleTy = dyn_cast<TupleType>(lhsTy);
+    TupleType rhsTupleTy = dyn_cast<TupleType>(rhsTy);
+    if (!lhsTupleTy or !rhsTupleTy)
+      return rewriter.notifyMatchFailure(op, "expected tuple type"); 
+
+    // coord.weak_product -> tuple.map + coord.weak_product
+    //
+    // !P = tuple<...>
+    // %products = tuple.map %lhs, %rhs : !Lhs, !Rhs -> !P {
+    // ^bb0(%a: !coord.poly<0>, %b: !coord.poly<1>):
+    //   %res = coord.weak_product %a, %b : !coord.poly<0>, !coord.poly<1> -> !coord.poly<2>
+    //   yield %res : !coord.poly<2>
+    // }
+
+    // infer the result type of this tuple.map
+    SmallVector<Type> productResultTypes;
+    for (auto [a, b] : llvm::zip(lhsTupleTy.getTypes(), rhsTupleTy.getTypes())) {
+      Type ty = inferWeakProductReturnType(std::nullopt, a, b);
+      productResultTypes.push_back(ty);
+    }
+
+    TupleType productsTy = TupleType::get(ctx, productResultTypes);
+
+    // %products = tuple.map %lhs, %rhs : !Lhs, !Rhs -> !R { ... }
+    auto mapOp = rewriter.create<tuple::MapOp>(
+      loc,
+      productsTy,
+      ValueRange{op.getLhs(), op.getRhs()}
+    );
+
+    // create the region with recursive coord.weak_product
+    {
+      PatternRewriter::InsertionGuard guard(rewriter);
+
+      Block* block = rewriter.createBlock(&mapOp.getBody());
+      rewriter.setInsertionPointToStart(block);
+
+      // block arguments are !coord.poly<0> and !coord.poly<1>
+      // XXX TODO do we need to use fresh poly types?
+      block->addArguments({PolyType::get(ctx, 0), PolyType::get(ctx, 1)}, {loc, loc});
+
+      // %res = coord.weak_product %a, %b : !coord.poly<0>, !coord.poly<1> -> !coord.poly<2>
+      Value res = rewriter.create<WeakProductOp>(
+        loc,
+        PolyType::get(ctx, 2), // !coord.poly<2>
+        block->getArgument(0),
+        block->getArgument(1));
+
+      // yield %res
+      rewriter.create<tuple::YieldOp>(loc, res);
+    }
+
+    Value products = mapOp.getResult();
+
+    // when all elements of the products tuple are not congruent,
+    // we return products directly
+    if (!areCongruent(productsTy.getTypes())) {
+      rewriter.replaceOp(op, products);
+      return success();
+    }
+
+    // otherwise, we return the sum of the products
+    
+    // %init = coord.zero : !T
+    // %res = tuple.foldl %init, %products : !T, !P -> !T {
+    // ^bb0(%acc: !T, %e: !T):
+    //   %res = coord.add %acc, %e : !T
+    //   yield %res : !T
+    // }
+
+    Type resultTy = productsTy.getType(0);
+
+    // %init = coord.zero : !T
+    auto init = rewriter.create<ZeroOp>(loc, resultTy);
+
+    // %res = tuple.foldl %init, %products : !T, !P -> !T { ... }
+    auto foldlOp = rewriter.create<tuple::FoldlOp>(
+      loc,
+      resultTy,
+      ValueRange{init, products}
+    );
+
+    // create the fold body
+    {
+      PatternRewriter::InsertionGuard guard(rewriter);
+
+      Block* block = rewriter.createBlock(&foldlOp.getBody());
+      rewriter.setInsertionPointToStart(block);
+
+      // block arguments are resultTy
+      block->addArguments({resultTy, resultTy}, {loc, loc});
+
+      // %res = coord.add %acc, %e : !T
+      Value res = rewriter.create<AddOp>(
+        loc,
+        block->getArgument(0), // %acc
+        block->getArgument(1)  // %e
+      );
+
+      // yield %res : !T
+      rewriter.create<tuple::YieldOp>(loc, res);
+    }
+
+    // replace the original operation
+    rewriter.replaceOp(op, foldlOp.getResult());
+    return success();
+  }
+};
+
 void populateCoordToTraitConversionPatterns(RewritePatternSet& patterns) {
   // lower ops
   patterns.add<
     AddOpLowering,
     InnerProductOpLowering,
     SubOpLowering,
+    WeakProductOpLowering,
     ZeroOpLowering
   >(patterns.getContext());
 }
