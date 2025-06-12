@@ -59,4 +59,23 @@ def SubOp : CoordOp<"sub", [
   let assemblyFormat = "$lhs `,` $rhs `:` type($result) attr-dict";
 }
 
+def ZeroOp : CoordOp<"zero", [Pure]> {
+  let summary = "Create a coordinate initialized to zero";
+  let description = [{
+    The `coord.zero` operation creates a coordinate of the specified type
+    with all elements initialized to zero.
+
+    Example:
+    ```mlir
+    %0 = coord.zero : i64
+    %1 = coord.zero : tuple<i64, tuple<>, tuple<i64, i64, i64>>
+    %2 = coord.zero : !coord.poly<0>
+    ```
+  }];
+
+  let results = (outs CoordLike:$result);
+
+  let assemblyFormat = "`:` type($result) attr-dict";
+}
+
 #endif // COORD_OPS_TD

@@ -197,12 +197,55 @@ struct SubOpLowering : public OpRewritePattern<SubOp> {
   }
 };
 
+struct ZeroOpLowering : public OpRewritePattern<ZeroOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ZeroOp op, PatternRewriter &rewriter) const override {
+    Type resultTy = op.getResult().getType();
+
+    if (trait::containsSymbolicType(resultTy))
+      return rewriter.notifyMatchFailure(op, "result type is still symbolic");
+
+    if (resultTy.isInteger()) {
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+        op,
+        rewriter.getIntegerAttr(resultTy, 0)
+      );
+      return success();
+    }
+
+    TupleType tupleTy = dyn_cast<TupleType>(resultTy);
+    if (tupleTy) {
+      // emit a coord.zero op for each tuple element
+      SmallVector<Value> elements;
+      for (Type ty : tupleTy.getTypes()) {
+        Value element = rewriter.create<ZeroOp>(
+          op.getLoc(),
+          ty
+        );
+        elements.push_back(element);
+      }
+
+      // replace the original op with a tuple.make
+      rewriter.replaceOpWithNewOp<tuple::MakeOp>(
+        op,
+        elements
+      );
+
+      return success();
+    }
+
+    return rewriter.notifyMatchFailure(op, "unsupported result type");
+  }
+};
+
 void populateCoordToTraitConversionPatterns(RewritePatternSet& patterns) {
   // lower ops
   patterns.add<
     AddOpLowering,
     InnerProductOpLowering,
-    SubOpLowering
+    SubOpLowering,
+    ZeroOpLowering
   >(patterns.getContext());
 }
 
